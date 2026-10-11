@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Korra Proposal Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Instrument+Serif:ital@1&family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Hind+Siliguri:wght@400;500;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
+<style>
+/* Builder on the left (dark, like the site), A4 proposal on the right (paper pages with a dark cover). */
+:root{
+  --ink:#090B05; --ink-2:#12160B; --ink-3:#1B2111; --line:rgba(226,240,154,.10); --line-2:rgba(226,240,154,.18);
+  --fg:#F3F6E6; --muted:#A9B097; --dim:#737A62; --lime:#C5E22F; --olive:#5A7408;
+  --paper:#FFFFFF; --paper-ink:#11140B; --paper-muted:#5B6150; --paper-line:#E3E7D6; --paper-tint:#F4F7E6;
+  --f-display:"Bricolage Grotesque","Hind Siliguri",ui-sans-serif,system-ui,sans-serif;
+  --f-serif:"Instrument Serif",Georgia,serif;
+  --f-body:"Onest","Hind Siliguri",ui-sans-serif,system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --f-bn:"Hind Siliguri","Noto Sans Bengali",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:linear-gradient(180deg,#080A04,#0D1107);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:clip}
+button{font:inherit;color:inherit;cursor:pointer}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--lime);outline-offset:2px;border-radius:6px}
+
+/* top bar */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px clamp(16px,3vw,28px);background:rgba(9,11,5,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.bar .brand{display:flex;align-items:center;gap:12px;font-family:var(--f-mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.bar .brand img{height:34px}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;font-weight:600;font-size:14px;border:1px solid var(--line-2);background:transparent;text-decoration:none;white-space:nowrap}
+.btn:hover{border-color:var(--lime)}
+.btn.pri{background:var(--lime);color:#0B0D07;border-color:var(--lime)}
+.btn svg{width:15px;height:15px}
+
+/* layout */
+.app{display:grid;grid-template-columns:minmax(340px,440px) 1fr;gap:0;min-height:calc(100vh - 60px)}
+.app>*{min-width:0}
+@media (max-width:980px){.app{grid-template-columns:1fr}}
+.form{border-right:1px solid var(--line);padding:20px clamp(16px,2.4vw,24px) 60px;max-height:calc(100vh - 60px);overflow:auto;position:sticky;top:60px}
+@media (max-width:980px){.form{max-height:none;position:static;border-right:0;border-bottom:1px solid var(--line)}}
+.preview{padding:24px clamp(16px,3vw,40px) 60px;overflow:hidden}
+.fs{border:1px solid var(--line);border-radius:16px;padding:16px;margin:0 0 14px;background:rgba(18,22,11,.6)}
+.fs>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-family:var(--f-display);font-weight:600;font-size:16px}
+.fs>summary::-webkit-details-marker{display:none}
+.fs>summary .n{font-family:var(--f-mono);font-size:11px;color:var(--lime);margin-right:8px}
+.fs>summary::after{content:"+";color:var(--muted);font-size:18px}
+.fs[open]>summary::after{content:"–"}
+.fs .in{display:grid;gap:12px;margin-top:14px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row2>*,.row3>*{min-width:0}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--muted)}
+input,select,textarea{font:inherit;font-size:14px;color:var(--fg);background:var(--ink);border:1px solid var(--line-2);border-radius:10px;padding:9px 11px;width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--lime)}
+textarea{resize:vertical;min-height:70px}
+.checks{display:flex;flex-wrap:wrap;gap:6px}
+.ck{position:relative}
+.ck input{position:absolute;opacity:0;width:1px;height:1px}
+.ck span{display:inline-block;padding:7px 12px;border-radius:999px;border:1px solid var(--line-2);font-size:13px;cursor:pointer;color:var(--fg)}
+.ck input:checked+span{background:var(--lime);color:#0B0D07;border-color:var(--lime)}
+.ck input:focus-visible+span{outline:2px solid #fff;outline-offset:2px}
+.svcrow{display:grid;grid-template-columns:auto 1fr 74px 96px;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.svcrow:first-child{border-top:0}
+.svcrow .t{font-size:13.5px}
+.svcrow .t small{display:block;color:var(--dim);font-size:11px}
+.svcrow input[type=number]{padding:7px 8px;font-size:13px}
+.svcrow input[type=checkbox]{width:18px;height:18px;accent-color:var(--lime)}
+.svhead{display:grid;grid-template-columns:auto 1fr 74px 96px;gap:8px;font-family:var(--f-mono);font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+.svhead span:first-child{width:18px}
+.hint{font-size:12px;color:var(--dim)}
+.tot{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:13px;padding-top:10px;border-top:1px dashed var(--line-2)}
+.tot b{color:var(--lime)}
+.saved{display:flex;flex-direction:column;gap:6px}
+.saved .it{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:10px}
+.saved .it button{border:0;background:none;color:var(--lime);font-size:12px;padding:2px 4px}
+.saved .it button.del{color:var(--dim)}
+/* login gate */
+.gate{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:16px;background:radial-gradient(700px 500px at 80% 0%,rgba(197,226,47,.22),transparent 60%),radial-gradient(600px 500px at 0% 100%,rgba(197,226,47,.1),transparent 60%),#080A04}
+.gate-card{width:min(420px,100%);border:1px solid var(--line-2);border-radius:24px;padding:clamp(24px,5vw,36px);background:rgba(18,22,11,.85);display:flex;flex-direction:column;gap:14px}
+.gate-card img{height:52px;width:auto;align-self:flex-start}
+.gate-card h1{font-family:var(--f-display);font-size:28px;letter-spacing:-.03em;margin:8px 0 0;line-height:1.1}
+.gate-card p{margin:0;color:var(--muted);font-size:14px}
+.gate-card .btn{justify-content:center;padding:12px 16px}
+.gate-err{color:#FF8A7A;font-size:13px}
+.gate-ok{color:var(--lime);font-size:13px}
+.gate-demo{border:1px dashed var(--line-2);border-radius:12px;padding:10px 12px;font-size:12.5px;color:var(--muted)}
+.gate-demo b{color:var(--lime);font-family:var(--f-mono);font-weight:600}
+.back{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);text-decoration:none;align-self:flex-start;margin-bottom:4px}
+.back:hover{color:var(--lime)}
+.back svg{width:14px;height:14px}
+.linkbtn{background:none;border:0;color:var(--muted);font-size:13px;text-decoration:underline;padding:0;align-self:flex-start}
+.who{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
+.who b{color:var(--fg);font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.who .av{width:28px;height:28px;border-radius:50%;background:var(--lime);color:#0B0D07;display:grid;place-items:center;font-weight:700;font-size:12px}
+.badge-r{font-family:var(--f-mono);font-size:10px;border:1px solid var(--line-2);border-radius:999px;padding:2px 7px}
+.saved .it .m2{display:block;font-size:11px;color:var(--dim)}
+body.client .gate,body.client .who{display:none!important}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--lime);color:#0B0D07;padding:10px 18px;border-radius:999px;font-weight:600;z-index:50;font-size:14px;max-width:calc(100vw - 32px);text-align:center}
+.linkbox{display:flex;gap:6px;margin-top:6px}
+.linkbox input{font-family:var(--f-mono);font-size:11px}
+
+/* ===== the proposal document ===== */
+.docwrap{position:relative}
+.doc{width:794px;transform-origin:top left}
+.page{width:794px;min-height:1123px;background:var(--paper);color:var(--paper-ink);position:relative;overflow:hidden;margin-bottom:24px;box-shadow:0 30px 70px -30px rgba(0,0,0,.8);padding:64px 64px 80px;font-family:var(--f-body);font-size:13.5px;line-height:1.6}
+.doc.bn .page{font-family:var(--f-bn)}
+.page .pf{position:absolute;left:64px;right:64px;bottom:28px;display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:9.5px;color:var(--paper-muted);border-top:1px solid var(--paper-line);padding-top:10px}
+.page .corner{position:absolute;right:-60px;top:-60px;width:220px;height:220px;background:repeating-linear-gradient(135deg,var(--lime) 0 18px,#11140B 18px 36px);transform:rotate(0);opacity:.95;clip-path:polygon(40% 0,100% 0,100% 60%)}
+.page h2{font-family:var(--f-display);font-weight:800;font-size:34px;letter-spacing:-.03em;line-height:1.05;margin:0 0 6px;color:var(--paper-ink)}
+.doc.bn .page h2{font-family:var(--f-bn);letter-spacing:0}
+.page h2 em{font-family:var(--f-serif);font-weight:400;font-style:italic;color:var(--olive)}
+.doc.bn .page h2 em{font-family:var(--f-bn);font-style:normal;font-weight:700}
+.page .ey{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--olive);display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.page .ey::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--lime);box-shadow:0 0 0 3px rgba(197,226,47,.35)}
+.page h3{font-family:var(--f-display);font-size:17px;margin:0;letter-spacing:-.01em}
+.doc.bn .page h3{font-family:var(--f-bn)}
+.page p{margin:0 0 10px}
+.muted{color:var(--paper-muted)}
+.sec{margin-top:30px}
+.sec:first-of-type{margin-top:0}
+
+.cover{background:#0B0D07;color:#F3F6E6;padding:0;display:flex;flex-direction:column}
+.cover .glow{position:absolute;inset:0;background:radial-gradient(520px 420px at 85% 10%,rgba(197,226,47,.35),transparent 60%),radial-gradient(400px 360px at 0% 90%,rgba(197,226,47,.14),transparent 60%)}
+.cover .tape{position:absolute;left:-40px;right:-40px;height:46px;display:flex;align-items:center;gap:26px;white-space:nowrap;font-family:var(--f-display);font-weight:800;font-size:17px;text-transform:uppercase;overflow:hidden;padding-left:20px}
+.cover .tape.a{bottom:210px;background:var(--lime);color:#0B0D07;transform:rotate(-4deg)}
+.cover .tape.b{bottom:200px;background:#151A0D;color:var(--lime);border-block:1px solid rgba(197,226,47,.4);transform:rotate(3deg)}
+.cover .in{position:relative;z-index:2;padding:60px 64px;display:flex;flex-direction:column;height:1123px}
+.cover .logo{height:64px;width:auto;align-self:flex-start}
+.cover .kind{margin-top:120px;font-family:var(--f-mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--lime)}
+.cover h1{font-family:var(--f-display);font-weight:800;font-size:64px;line-height:.95;letter-spacing:-.04em;margin:14px 0 0}
+.doc.bn .cover h1{font-family:var(--f-bn);letter-spacing:0;line-height:1.1}
+.cover h1 .for{display:block;font-family:var(--f-serif);font-style:italic;font-weight:400;font-size:40px;color:#C9D0B4;letter-spacing:-.01em;margin-bottom:6px}
+.doc.bn .cover h1 .for{font-family:var(--f-bn);font-style:normal;font-size:30px}
+.cover h1 .cn{background:linear-gradient(var(--lime),var(--lime)) 0 88%/100% .32em no-repeat;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.cover .tag{font-size:16px;color:#C9D0B4;margin-top:22px;max-width:46ch}
+.cover .meta{margin-top:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:14px;border-top:1px solid rgba(226,240,154,.2);padding-top:18px;position:relative;z-index:3;background:#0B0D07}
+.cover .meta span{display:block;font-family:var(--f-mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:#8B927A}
+.cover .meta b{font-size:13.5px;font-weight:600}
+
+.letter p{font-size:14px}
+.sign{margin-top:26px;display:flex;align-items:center;gap:14px}
+.sign .sig{font-family:var(--f-serif);font-style:italic;font-size:30px;color:var(--olive);line-height:1}
+.box{border:1px solid var(--paper-line);border-radius:14px;padding:16px 18px;background:var(--paper-tint)}
+.snap{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+.snap div{border:1px solid var(--paper-line);border-radius:12px;padding:12px}
+.snap span{display:block;font-family:var(--f-mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--paper-muted)}
+.snap b{font-family:var(--f-display);font-size:22px;letter-spacing:-.02em}
+.issues{list-style:none;padding:0;margin:14px 0 0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.issues li{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;background:#FFF3F1;border:1px solid #F5D3CD;font-size:13px}
+.issues li::before{content:"!";flex:none;width:18px;height:18px;border-radius:50%;background:#C2352A;color:#fff;font-weight:700;font-size:11px;display:grid;place-items:center;margin-top:1px}
+.goals{list-style:none;padding:0;margin:14px 0 0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.goals li{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;background:var(--paper-tint);border:1px solid #DCE8A8;font-size:13px}
+.goals li::before{content:"✓";flex:none;width:18px;height:18px;border-radius:50%;background:var(--lime);color:#0B0D07;font-weight:700;font-size:11px;display:grid;place-items:center;margin-top:1px}
+.plan{display:grid;gap:12px;margin-top:14px}
+.plan.two{grid-template-columns:1fr 1fr;gap:10px}
+.plan.two .pl{grid-template-columns:1fr auto;padding:12px}
+.plan.two .pl .ic{display:none}
+.pl{display:grid;grid-template-columns:44px 1fr auto;gap:14px;align-items:start;border:1px solid var(--paper-line);border-radius:14px;padding:14px 16px}
+.pl .ic{width:44px;height:44px;border-radius:12px;background:#0B0D07;color:var(--lime);display:grid;place-items:center;font-family:var(--f-mono);font-size:11px;font-weight:600}
+.pl .q{font-family:var(--f-mono);font-size:11px;background:var(--lime);color:#0B0D07;padding:4px 9px;border-radius:999px;white-space:nowrap;font-weight:600}
+.pl ul{margin:6px 0 0;padding-left:16px;color:var(--paper-muted);font-size:12.5px}
+.ideas{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+.ideas div{border-radius:12px;padding:12px;background:#0B0D07;color:#F3F6E6;font-size:12.5px;min-height:84px;display:flex;flex-direction:column;gap:6px}
+.ideas div span{font-family:var(--f-mono);font-size:10px;color:var(--lime)}
+.road{display:grid;gap:10px;margin-top:14px}
+.road.c3{grid-template-columns:repeat(3,1fr)}
+.road.c1{grid-template-columns:1fr}
+.road .m{border:1px solid var(--paper-line);border-radius:14px;padding:14px;border-top:5px solid var(--lime)}
+.road .m:nth-child(2){border-top-color:#9DBA1E}
+.road .m:nth-child(3){border-top-color:#5A7408}
+.road .m span{font-family:var(--f-mono);font-size:10px;color:var(--paper-muted);text-transform:uppercase;letter-spacing:.1em}
+.road ul{margin:8px 0 0;padding-left:16px;font-size:12.5px}
+.proj{margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:center}
+.bars{display:flex;align-items:flex-end;gap:10px;height:120px;border-bottom:1px solid var(--paper-line);padding:0 6px}
+.bars div{flex:1;background:linear-gradient(180deg,var(--lime),#9DBA1E);border-radius:8px 8px 0 0;position:relative}
+.bars div span{position:absolute;top:-18px;left:0;right:0;text-align:center;font-family:var(--f-mono);font-size:10px}
+.bars-l{display:flex;gap:10px;padding:4px 6px 0}
+.bars-l span{flex:1;text-align:center;font-family:var(--f-mono);font-size:9.5px;color:var(--paper-muted)}
+table.inv{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px}
+.inv th{text-align:left;font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper-muted);font-weight:400;padding:8px 10px;border-bottom:2px solid #0B0D07}
+.inv td{padding:10px;border-bottom:1px solid var(--paper-line);vertical-align:top}
+.inv td.r,.inv th.r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.inv tfoot td{border:0;padding:6px 10px}
+.inv .grand td{background:#0B0D07;color:#F3F6E6;font-weight:700;font-size:15px;padding:12px 10px}
+.inv .grand td.r{color:var(--lime)}
+.terms{margin-top:16px;font-size:12px;color:var(--paper-muted)}
+.terms li{margin-bottom:4px}
+.proof{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+.proof div{border:1px solid var(--paper-line);border-radius:12px;padding:12px}
+.proof b{display:block;font-family:var(--f-display);font-size:24px;color:var(--olive);letter-spacing:-.02em}
+.proof span{font-size:11.5px;color:var(--paper-muted)}
+.accept{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:40px}
+.accept div{border-top:1px solid #0B0D07;padding-top:8px;font-size:12px;color:var(--paper-muted)}
+.steps-n{counter-reset:s;list-style:none;padding:0;margin:14px 0 0;display:grid;gap:8px}
+.steps-n li{counter-increment:s;display:flex;gap:12px;align-items:center;font-size:13.5px}
+.steps-n li::before{content:counter(s);width:26px;height:26px;border-radius:50%;background:var(--lime);color:#0B0D07;display:grid;place-items:center;font-weight:700;font-family:var(--f-mono);font-size:12px;flex:none}
+.contactbox{margin-top:22px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.contactbox div{background:#0B0D07;color:#F3F6E6;border-radius:12px;padding:12px;font-size:12.5px}
+.contactbox span{display:block;font-family:var(--f-mono);font-size:9.5px;color:var(--lime);letter-spacing:.1em;text-transform:uppercase}
+
+/* client view (link opened) */
+body.client .form,body.client .bar .acts .b-only{display:none}
+body.client #bPrint{display:none}
+body.client .app{grid-template-columns:1fr}
+body.client .preview{display:flex;flex-direction:column;align-items:center}
+.cbar{display:none}
+body.client .cbar{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:6px 0 22px}
+
+/* print */
+@media print{
+  @page{size:A4;margin:0}
+  body{background:#fff}
+  .bar,.form,.cbar,.toast{display:none!important}
+  .app{display:block}
+  .preview{padding:0}
+  .docwrap{height:auto!important}
+  .doc{transform:none!important;width:210mm}
+  .page{width:210mm;min-height:297mm;margin:0;box-shadow:none;page-break-after:always;break-after:page;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .cover .in{height:297mm}
+}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="brand"><a href="index.html" aria-label="Back to Korra website" title="Back to website"><img src="logo/mark_dark.png" alt="Korra"></a><span id="barTitle">Proposal builder</span></div>
+  <div class="acts">
+    <a class="btn b-only" href="index.html">← Website</a>
+    <span class="who b-only" id="who" hidden><span class="av" id="whoAv">K</span><span><b id="whoEm"></b> <span class="badge-r" id="whoRole">team</span></span></span>
+    <button type="button" class="btn b-only" id="bOut" hidden>Log out</button>
+    <button type="button" class="btn b-only" id="bNew">New</button>
+    <button type="button" class="btn b-only" id="bSave">Save draft</button>
+    <button type="button" class="btn b-only" id="bLink"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6.5 9.5a3 3 0 0 0 4.2 0l2.1-2.1a3 3 0 0 0-4.2-4.2L7.5 4.3M9.5 6.5a3 3 0 0 0-4.2 0L3.2 8.6a3 3 0 0 0 4.2 4.2l1.1-1.1"/></svg>Client link</button>
+    <button type="button" class="btn pri" id="bPrint"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6V2h8v4M4 12H2V7h12v5h-2M4 10h8v4H4z"/></svg>Print / Save PDF</button>
+  </div>
+</header>
+
+<div class="app">
+  <aside class="form" id="form" aria-label="Proposal details">
+    <details class="fs" open><summary><span><span class="n">01</span>Client</span></summary><div class="in">
+      <div class="row2"><label for="f_biz">Business name<input id="f_biz" value="Bo's Coffee Cumilla"></label><label for="f_contact">Contact person<input id="f_contact" value="Mr. Rahman"></label></div>
+      <div class="row2"><label for="f_type">Business type<select id="f_type">
+        <option value="restaurant">Restaurant / café</option><option value="fashion">Clothing / fashion</option><option value="education">Education / coaching</option><option value="shop">Shop / e-commerce</option><option value="beauty">Health / beauty</option><option value="realestate">Real estate</option><option value="event">Event / organization</option><option value="other">Other</option></select></label>
+        <label for="f_loc">Location<input id="f_loc" value="Kandirpar, Cumilla"></label></div>
+      <label for="f_prod">Main products / services<input id="f_prod" value="Coffee, cold drinks, cakes and pastries"></label>
+      <div class="row2"><label for="f_lang">Proposal language<select id="f_lang"><option value="en">English</option><option value="bn">বাংলা</option></select></label><label for="f_date">Proposal date<input id="f_date" type="date"></label></div>
+    </div></details>
+
+    <details class="fs" open><summary><span><span class="n">02</span>What we found</span></summary><div class="in">
+      <div class="row3"><label for="f_fol">Page followers<input id="f_fol" type="number" min="0" value="4200"></label><label for="f_ppm">Posts / month now<input id="f_ppm" type="number" min="0" value="4"></label><label for="f_msg">Messages / month now<input id="f_msg" type="number" min="0" value="30"></label></div>
+      <span class="hint">Problems we noticed (pick all that apply)</span>
+      <div class="checks" id="f_issues"></div>
+      <label for="f_note">Our observation (in your words)<textarea id="f_note">Great products, but photos are taken on a phone and posts go out only when someone has time. Boosted posts bring likes, not orders.</textarea></label>
+    </div></details>
+
+    <details class="fs" open><summary><span><span class="n">03</span>Goals</span></summary><div class="in">
+      <div class="checks" id="f_goals"></div>
+      <label for="f_target">Main target (optional)<input id="f_target" value="300+ customer messages per month by month 3"></label>
+    </div></details>
+
+    <details class="fs" open><summary><span><span class="n">04</span>Services &amp; price</span></summary><div class="in">
+      <div class="svhead"><span></span><span>Service</span><span>Qty</span><span>Price ৳</span></div>
+      <div id="f_svcs"></div>
+      <div class="row3"><label for="f_months">Duration<select id="f_months"><option value="1">1 month</option><option value="3" selected>3 months</option><option value="6">6 months</option><option value="12">12 months</option></select></label>
+        <label for="f_adb">Ad budget / month ৳<input id="f_adb" type="number" min="0" step="500" value="10000"></label>
+        <label for="f_disc">Discount %<input id="f_disc" type="number" min="0" max="50" value="10"></label></div>
+      <div class="tot"><span>Proposal total</span><b id="f_total">৳0</b></div>
+      <span class="hint">Prices are demo values. Change them per client.</span>
+    </div></details>
+
+    <details class="fs"><summary><span><span class="n">05</span>Terms &amp; sign-off</span></summary><div class="in">
+      <div class="row2"><label for="f_by">Prepared by<input id="f_by" value="Korra Team"></label><label for="f_role">Role<input id="f_role" value="Marketing Strategist"></label></div>
+      <div class="row2"><label for="f_valid">Valid for (days)<input id="f_valid" type="number" min="1" value="15"></label><label for="f_no">Proposal no.<input id="f_no" value="KMA-2026-001"></label></div>
+      <label for="f_pay">Payment terms<textarea id="f_pay">50% advance at signing, 50% at the start of month 2. Ad budget is paid directly to Meta from the client's card or through Korra.</textarea></label>
+    </div></details>
+
+    <details class="fs"><summary><span><span class="n">06</span>Team proposals</span></summary><div class="in">
+      <div class="saved" id="saved"><span class="hint">No proposals saved yet.</span></div>
+    </div></details>
+
+    <div class="fs" id="linkfs" hidden><span class="hint">Client link (send on WhatsApp or email)</span>
+      <div class="linkbox"><input id="linkOut" readonly aria-label="Client link"><button type="button" class="btn" id="bCopy">Copy</button></div>
+      <a class="btn" id="waShare" target="_blank" rel="noopener" style="margin-top:8px">Send on WhatsApp</a>
+    </div>
+  </aside>
+
+  <main class="preview" id="preview">
+    <div class="cbar"><button type="button" class="btn pri" id="cPrint">Print / Save PDF</button><a class="btn" id="cAccept" target="_blank" rel="noopener">Accept on WhatsApp</a></div>
+    <div class="docwrap" id="docwrap"><div class="doc" id="doc"></div></div>
+  </main>
+</div>
+<div class="gate" id="gate" hidden>
+  <form class="gate-card" id="gateForm" novalidate>
+    <a class="back" href="index.html"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M13 8H3M7 4 3 8l4 4"/></svg>Back to website</a>
+    <img src="logo/full_dark.png" alt="Korra Marketing Agency">
+    <h1>Team login</h1>
+    <p>Only Korra team members can open the proposal builder.</p>
+    <label for="gEmail">Email<input id="gEmail" type="email" autocomplete="username" required></label>
+    <label for="gPass">Password<input id="gPass" type="password" autocomplete="current-password" required></label>
+    <button type="submit" class="btn pri" id="gBtn">Log in</button>
+    <button type="button" class="linkbtn" id="gForgot">Forgot password?</button>
+    <p class="gate-err" id="gErr" hidden role="alert"></p>
+    <p class="gate-ok" id="gOk" hidden role="status"></p>
+    <div class="gate-demo" id="gDemo" hidden>Demo mode (Firebase is not connected yet). Log in with <b>admin@korra.demo</b> / <b>korra2026</b>. This demo login switches off automatically once Firebase is set up.</div>
+  </form>
+</div>
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script>
+(function(){
+  /* ================= SETUP =================
+     1. Create a free Firebase project and paste its web config below.
+     2. Add team members in Firebase > Authentication > Users.
+     3. Put admin emails in ADMIN_EMAILS (admins can delete proposals).
+     While FIREBASE_CONFIG is null the page runs in demo mode.        */
+  var FIREBASE_CONFIG = null;
+  /* example:
+  var FIREBASE_CONFIG = {
+    apiKey: "AIza...", authDomain: "korra-team.firebaseapp.com",
+    projectId: "korra-team", appId: "1:123:web:abc"
+  }; */
+  var ADMIN_EMAILS = ['admin@korramarketing.com', 'admin@korra.demo'];
+  var FB_VER = '10.12.2';
+  var WA = '8801991791582';
+  var T = {
+    en:{prop:'Marketing proposal',for:'Prepared for',tag:'A growth plan built around your business, your customers and your goals.',no:'Proposal no.',date:'Date',valid:'Valid until',by:'Prepared by',
+      dear:'Dear',l1:'Thank you for the time you gave us. After learning about {biz} and studying your page, products and local market, we have put together a plan made only for you.',
+      l2:'Below you will find what we found, what we recommend, what it will cost, and what you can expect month by month. Our aim is simple: more customers, more sales, more growth.',
+      l3:'We would be glad to walk you through it in person.',regards:'With regards,',
+      found:'What we found',foundT:'Where your page stands <em>today</em>',fol:'Followers',ppm:'Posts / month',msg:'Messages / month',obs:'Our observation',
+      goals:'Your goals',goalsT:'What we will <em>work towards</em>',target:'Main target',
+      plan:'Our plan',planT:'Services <em>made for</em> {biz}',ideas:'Content ideas',ideasT:'Ideas we would start <em>with</em>',
+      road:'Roadmap',roadT:'Month by month <em>plan</em>',m:'Month',proj:'Ad projection',projT:'What your ad budget can <em>bring in</em>',projP:'With ৳{adb} per month in ads, based on cost per message from Korra\'s own Meta campaigns ($0.04–$0.10), we estimate:',projU:'messages / month',projN:'Estimate only. Results depend on product, offer and creative.',
+      inv:'Investment',invT:'Clear pricing, <em>no surprises</em>',item:'Service',qty:'Qty',mo:'Months',amt:'Amount',sub:'Subtotal',disc:'Discount',adbl:'Ad budget (paid to Meta)',grand:'Total investment',once:'one-time',per:'/ month',
+      terms:'Terms',why:'Why Korra',whyT:'Proof, <em>not promises</em>',p1:'messages from one $21.95 ad',p2:'lowest cost per conversation',p3:'people reached for $11.50',
+      next:'Next steps',nextT:'How we <em>start</em>',n1:'Confirm this proposal (sign below or reply on WhatsApp)',n2:'Pay the advance and share page access',n3:'Kick-off meeting and first shoot within 7 days',n4:'Your first content goes live in week 2',
+      acc:'Client signature & date',acc2:'For Korra Marketing Agency',ph:'Phone / WhatsApp',em:'Email',of:'Office'},
+    bn:{prop:'মার্কেটিং প্রপোজাল',for:'যার জন্য তৈরি',tag:'আপনার ব্যবসা, আপনার কাস্টমার আর আপনার লক্ষ্য মাথায় রেখে তৈরি একটি গ্রোথ প্ল্যান।',no:'প্রপোজাল নং',date:'তারিখ',valid:'মেয়াদ',by:'প্রস্তুতকারী',
+      dear:'প্রিয়',l1:'আমাদের সময় দেওয়ার জন্য ধন্যবাদ। {biz} সম্পর্কে জেনে, আপনার পেজ, প্রোডাক্ট আর লোকাল মার্কেট বিশ্লেষণ করে আমরা শুধু আপনার জন্য একটি প্ল্যান সাজিয়েছি।',
+      l2:'নিচে আছে আমরা কী পেয়েছি, কী করার পরামর্শ দিচ্ছি, খরচ কত, আর প্রতি মাসে কী আশা করতে পারেন। আমাদের লক্ষ্য সহজ: বেশি কাস্টমার, বেশি বিক্রি, বেশি গ্রোথ।',
+      l3:'সামনাসামনি পুরো প্ল্যানটা বুঝিয়ে বলতে পারলে আমরা খুশি হব।',regards:'শুভেচ্ছান্তে,',
+      found:'আমরা যা পেয়েছি',foundT:'আপনার পেজ <em>এখন</em> কোথায়',fol:'ফলোয়ার',ppm:'মাসে পোস্ট',msg:'মাসে মেসেজ',obs:'আমাদের পর্যবেক্ষণ',
+      goals:'আপনার লক্ষ্য',goalsT:'আমরা যা <em>অর্জন করতে</em> কাজ করব',target:'মূল লক্ষ্য',
+      plan:'আমাদের প্ল্যান',planT:'{biz}-এর জন্য <em>সাজানো</em> সার্ভিস',ideas:'কনটেন্ট আইডিয়া',ideasT:'যেসব আইডিয়া দিয়ে <em>শুরু</em> করব',
+      road:'রোডম্যাপ',roadT:'মাস অনুযায়ী <em>প্ল্যান</em>',m:'মাস',proj:'অ্যাড প্রজেকশন',projT:'আপনার অ্যাড বাজেটে <em>কী আসতে পারে</em>',projP:'মাসে ৳{adb} অ্যাড বাজেটে, কড়রার নিজস্ব Meta ক্যাম্পেইনের প্রতি-মেসেজ খরচ ($0.04–$0.10) ধরে আমাদের অনুমান:',projU:'মেসেজ / মাস',projN:'শুধু আনুমানিক। ফলাফল প্রোডাক্ট, অফার আর ডিজাইনের ওপর নির্ভর করে।',
+      inv:'বিনিয়োগ',invT:'পরিষ্কার দাম, <em>কোনো লুকোনো খরচ নেই</em>',item:'সার্ভিস',qty:'পরিমাণ',mo:'মাস',amt:'মূল্য',sub:'সাবটোটাল',disc:'ছাড়',adbl:'অ্যাড বাজেট (Meta-কে দেওয়া হবে)',grand:'মোট বিনিয়োগ',once:'এককালীন',per:'/ মাস',
+      terms:'শর্তাবলি',why:'কেন কড়রা',whyT:'প্রতিশ্রুতি না, <em>প্রমাণ</em>',p1:'মেসেজ, মাত্র $21.95 এর একটি অ্যাডে',p2:'সবচেয়ে কম প্রতি-মেসেজ খরচ',p3:'জনের কাছে পৌঁছানো, $11.50 খরচে',
+      next:'পরবর্তী ধাপ',nextT:'যেভাবে <em>শুরু</em> করব',n1:'প্রপোজাল কনফার্ম করুন (নিচে সই করুন বা WhatsApp-এ জানান)',n2:'অগ্রিম পেমেন্ট দিন আর পেজের অ্যাক্সেস দিন',n3:'৭ দিনের মধ্যে কিক-অফ মিটিং আর প্রথম শুট',n4:'দ্বিতীয় সপ্তাহে প্রথম কনটেন্ট লাইভ',
+      acc:'ক্লায়েন্টের স্বাক্ষর ও তারিখ',acc2:'কড়রা মার্কেটিং এজেন্সির পক্ষে',ph:'ফোন / WhatsApp',em:'ইমেইল',of:'অফিস'}
+  };
+  var ISSUES = [['vis','Low online visibility','অনলাইনে কম দেখা যায়'],['photo','Phone-quality photos','মোবাইলে তোলা সাধারণ মানের ছবি'],['irreg','Irregular posting','অনিয়মিত পোস্ট'],['brand','Weak or mixed branding','দুর্বল বা এলোমেলো ব্র্যান্ডিং'],['ads','Boosts bring likes, not sales','বুস্ট করলে লাইক আসে, বিক্রি না'],['video','No reels or videos','কোনো রিল বা ভিডিও নেই'],['reply','Slow replies to messages','মেসেজের উত্তর দেরিতে'],['web','No website','কোনো ওয়েবসাইট নেই']];
+  var GOALS = [['sales','More orders and messages','বেশি অর্ডার ও মেসেজ'],['aware','Brand awareness in the city','শহরে ব্র্যান্ড পরিচিতি'],['launch','Launch a new product or branch','নতুন প্রোডাক্ট বা শাখা চালু'],['follow','Grow followers and engagement','ফলোয়ার ও এনগেজমেন্ট বাড়ানো'],['look','A professional brand look','প্রফেশনাল ব্র্যান্ড লুক'],['web','Online sales from a website','ওয়েবসাইট থেকে অনলাইন বিক্রি']];
+  // id, en, bn, unit en, unit bn, monthly?, default qty, default price(total for the line per month or one-time), on?
+  var SVCS = [
+    ['smm','Social media management','সোশ্যাল মিডিয়া ম্যানেজমেন্ট','posts / month','পোস্ট / মাস',1,20,15000,1, ['Monthly content calendar','Post design and captions','Inbox and comment replies','Monthly performance report'],['মাসিক কনটেন্ট ক্যালেন্ডার','পোস্ট ডিজাইন ও ক্যাপশন','ইনবক্স ও কমেন্টের উত্তর','মাসিক পারফরম্যান্স রিপোর্ট']],
+    ['photo','Photography','ফটোগ্রাফি','shoot days / month','শুট দিন / মাস',1,1,8000,1, ['Product and lifestyle photos','Edited, ready-to-post images','Photos for menu, catalog and ads'],['প্রোডাক্ট ও লাইফস্টাইল ছবি','এডিট করা, পোস্টের জন্য তৈরি ছবি','মেনু, ক্যাটালগ ও অ্যাডের ছবি']],
+    ['video','Reels & video','রিল ও ভিডিও','reels / month','রিল / মাস',1,6,12000,1, ['Script and hook writing','Shooting and editing','Captions and music'],['স্ক্রিপ্ট ও হুক লেখা','শুটিং ও এডিটিং','ক্যাপশন ও মিউজিক']],
+    ['ads','Meta & Google ads management','Meta ও Google অ্যাড ম্যানেজমেন্ট','campaigns / month','ক্যাম্পেইন / মাস',1,2,6000,1, ['Audience research and targeting','A/B testing creatives','Weekly optimization','Results report with real numbers'],['অডিয়েন্স রিসার্চ ও টার্গেটিং','ক্রিয়েটিভের A/B টেস্ট','সাপ্তাহিক অপটিমাইজেশন','আসল সংখ্যাসহ রিপোর্ট']],
+    ['plan','Content planning & strategy','কনটেন্ট প্ল্যানিং ও স্ট্র্যাটেজি','plan / month','প্ল্যান / মাস',1,1,0,0, ['Trend research','Monthly campaign ideas','Festival and offer planning'],['ট্রেন্ড রিসার্চ','মাসিক ক্যাম্পেইন আইডিয়া','উৎসব ও অফার প্ল্যানিং']],
+    ['brand','Branding kit','ব্র্যান্ডিং কিট','kit','কিট',0,1,15000,0, ['Logo refresh or design','Colors, fonts and post templates','Cover and banner set'],['লোগো নতুন করে বা ডিজাইন','রং, ফন্ট ও পোস্ট টেমপ্লেট','কভার ও ব্যানার সেট']],
+    ['web','Website','ওয়েবসাইট','site','সাইট',0,1,35000,0, ['Mobile-first business website','WhatsApp and Messenger buttons','Basic SEO and Google Maps'],['মোবাইল-ফার্স্ট বিজনেস ওয়েবসাইট','WhatsApp ও Messenger বাটন','বেসিক SEO ও Google Maps']],
+    ['event','Event coverage','ইভেন্ট কভারেজ','events','ইভেন্ট',0,1,12000,0, ['Photo and video coverage','Same-day highlight reel','Edited album'],['ছবি ও ভিডিও কভারেজ','একই দিনে হাইলাইট রিল','এডিট করা অ্যালবাম']]
+  ];
+  var IDEAS = {
+    restaurant:[['Signature dish close-ups','সিগনেচার ডিশের ক্লোজ-আপ'],['Behind-the-kitchen reels','কিচেনের পেছনের রিল'],['Customer taste-test videos','কাস্টমারের টেস্ট-রিভিউ ভিডিও'],['Weekend combo offers','উইকেন্ড কম্বো অফার'],['Chef\'s special of the week','সপ্তাহের শেফ স্পেশাল'],['Festival menu for Eid and Boishakh','ঈদ ও বৈশাখের বিশেষ মেনু']],
+    fashion:[['New arrival lookbooks','নতুন কালেকশনের লুকবুক'],['One piece, three looks reels','এক পোশাক, তিন স্টাইল রিল'],['Customer try-on videos','কাস্টমারের ট্রাই-অন ভিডিও'],['Fabric close-ups','কাপড়ের ক্লোজ-আপ'],['Flash sale countdowns','ফ্ল্যাশ সেলের কাউন্টডাউন'],['Festival collection launch','উৎসবের কালেকশন লঞ্চ']],
+    education:[['Student success stories','শিক্ষার্থীদের সাফল্যের গল্প'],['One-minute tips from teachers','শিক্ষকদের ১ মিনিটের টিপস'],['Live Q&A sessions','লাইভ প্রশ্নোত্তর'],['Admission countdown posts','ভর্তির কাউন্টডাউন পোস্ট'],['Result celebration posts','রেজাল্ট উদযাপন পোস্ট'],['Free mock-test campaign','ফ্রি মক টেস্ট ক্যাম্পেইন']],
+    shop:[['Unboxing reels','আনবক্সিং রিল'],['Product in daily use videos','প্রতিদিনের ব্যবহারে প্রোডাক্ট'],['Customer review carousels','কাস্টমার রিভিউ ক্যারোসেল'],['Bundle offers','বান্ডেল অফার'],['Delivery-day vlogs','ডেলিভারির দিনের ভ্লগ'],['Limited-stock alerts','সীমিত স্টকের অ্যালার্ট']],
+    beauty:[['Before and after (with consent)','আগে-পরে (অনুমতি নিয়ে)'],['Expert tips','বিশেষজ্ঞের টিপস'],['How-to reels','কীভাবে ব্যবহার করবেন রিল'],['Client testimonials','ক্লায়েন্টের মতামত'],['Monthly offer posts','মাসিক অফার পোস্ট'],['Myth vs fact series','ভুল ধারণা বনাম সত্য সিরিজ']],
+    realestate:[['Project walkthrough videos','প্রজেক্ট ঘুরে দেখার ভিডিও'],['Location and drone shots','লোকেশন ও ড্রোন শট'],['Floor plan explainers','ফ্লোর প্ল্যান ব্যাখ্যা'],['Buyer stories','ক্রেতাদের গল্প'],['Booking offers','বুকিং অফার'],['Construction progress updates','নির্মাণ অগ্রগতির আপডেট']],
+    event:[['Highlight reel within 24 hours','২৪ ঘণ্টার মধ্যে হাইলাইট রিল'],['Speaker and guest intros','বক্তা ও অতিথি পরিচিতি'],['Countdown posts','কাউন্টডাউন পোস্ট'],['Sponsor shout-outs','স্পন্সর শাউট-আউট'],['Behind the scenes','পর্দার পেছনের মুহূর্ত'],['Photo albums for attendees','অংশগ্রহণকারীদের ছবির অ্যালবাম']],
+    other:[['Meet the owner story','মালিকের গল্প'],['Product or service close-ups','প্রোডাক্ট বা সার্ভিসের ক্লোজ-আপ'],['Customer reviews','কাস্টমারের রিভিউ'],['Monthly offer campaign','মাসিক অফার ক্যাম্পেইন'],['Behind the scenes reels','পর্দার পেছনের রিল'],['Festival campaigns','উৎসব ক্যাম্পেইন']]
+  };
+
+  /* ---- build form controls ---- */
+  function chk(container, list, on){
+    var c = document.getElementById(container);
+    list.forEach(function(it){ var l = document.createElement('label'); l.className = 'ck'; l.innerHTML = '<input type="checkbox" value="' + it[0] + '"' + (on.indexOf(it[0]) > -1 ? ' checked' : '') + '><span></span>'; l.querySelector('span').textContent = it[1]; c.appendChild(l); });
+  }
+  chk('f_issues', ISSUES, ['photo','irreg','ads','video']);
+  chk('f_goals', GOALS, ['sales','aware','look']);
+  var sv = document.getElementById('f_svcs');
+  SVCS.forEach(function(s){
+    var r = document.createElement('div'); r.className = 'svcrow';
+    r.innerHTML = '<input type="checkbox" id="s_' + s[0] + '"' + (s[8] ? ' checked' : '') + '><label class="t" for="s_' + s[0] + '"></label><input type="number" min="0" id="q_' + s[0] + '" value="' + s[6] + '" aria-label="Quantity"><input type="number" min="0" step="500" id="p_' + s[0] + '" value="' + s[7] + '" aria-label="Price">';
+    r.querySelector('.t').innerHTML = '<span></span><small></small>'; r.querySelector('.t span').textContent = s[1]; r.querySelector('.t small').textContent = s[3] + (s[5] ? ' · monthly' : ' · one-time');
+    sv.appendChild(r);
+  });
+  var today = new Date(); document.getElementById('f_date').value = today.toISOString().slice(0, 10);
+  document.getElementById('f_type').value = 'restaurant';
+
+  /* ---- read / write state ---- */
+  var IDS = ['biz','contact','type','loc','prod','lang','date','fol','ppm','msg','note','target','months','adb','disc','by','role','valid','no','pay'];
+  function read(){
+    var d = {}; IDS.forEach(function(k){ d[k] = document.getElementById('f_' + k).value; });
+    d.issues = [].map.call(document.querySelectorAll('#f_issues input:checked'), function(i){ return i.value; });
+    d.goals = [].map.call(document.querySelectorAll('#f_goals input:checked'), function(i){ return i.value; });
+    d.svcs = SVCS.filter(function(s){ return document.getElementById('s_' + s[0]).checked; }).map(function(s){ return [s[0], +document.getElementById('q_' + s[0]).value || 0, +document.getElementById('p_' + s[0]).value || 0]; });
+    return d;
+  }
+  function write(d){
+    IDS.forEach(function(k){ if (d[k] != null) document.getElementById('f_' + k).value = d[k]; });
+    document.querySelectorAll('#f_issues input').forEach(function(i){ i.checked = (d.issues || []).indexOf(i.value) > -1; });
+    document.querySelectorAll('#f_goals input').forEach(function(i){ i.checked = (d.goals || []).indexOf(i.value) > -1; });
+    SVCS.forEach(function(s){ var f = (d.svcs || []).filter(function(x){ return x[0] === s[0]; })[0]; document.getElementById('s_' + s[0]).checked = !!f; if (f){ document.getElementById('q_' + s[0]).value = f[1]; document.getElementById('p_' + s[0]).value = f[2]; } });
+  }
+
+  /* ---- helpers ---- */
+  function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function money(n){ return '৳' + Math.round(n).toLocaleString('en-US'); }
+  function num(n){ return Math.round(n).toLocaleString('en-US'); }
+  function fdate(s, lang, plus){ var d = s ? new Date(s + 'T00:00:00') : new Date(); if (plus) d.setDate(d.getDate() + plus); return d.toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-GB', {day:'numeric', month:'long', year:'numeric'}); }
+  function svc(id){ return SVCS.filter(function(s){ return s[0] === id; })[0]; }
+  function totals(d){
+    var months = +d.months || 1, sub = 0, rows = [];
+    d.svcs.forEach(function(x){ var s = svc(x[0]); var amt = s[5] ? x[2] * months : x[2]; sub += amt; rows.push({s:s, q:x[1], price:x[2], amt:amt}); });
+    var disc = sub * (Math.min(50, +d.disc || 0) / 100), adb = (+d.adb || 0) * months;
+    return {rows:rows, sub:sub, disc:disc, adb:adb, grand:sub - disc + adb, months:months};
+  }
+
+  /* ---- render the proposal ---- */
+  function render(d){
+    var L = T[d.lang] || T.en, bn = d.lang === 'bn', ix = bn ? 2 : 1, t = totals(d);
+    var biz = esc(d.biz || 'Your business'), pn = 0, pages = [];
+    function pf(){ pn++; return '<div class="pf"><span>Korra Marketing Agency · ' + esc(d.no) + '</span><span>' + biz + ' · ' + pn + '</span></div>'; }
+    var tapeA = '<span>Content</span><span>•</span><span>Photography</span><span>•</span><span>Video</span><span>•</span><span>Ads</span><span>•</span><span>Branding</span><span>•</span><span>Websites</span><span>•</span><span>Content</span><span>•</span><span>Photography</span>';
+    var tapeB = '<span>More customers</span><span>•</span><span>More sales</span><span>•</span><span>More growth</span><span>•</span><span>বেশি কাস্টমার</span><span>•</span><span>বেশি বিক্রি</span><span>•</span><span>More growth</span>';
+    // 1 cover
+    pn++;
+    pages.push('<section class="page cover"><div class="glow"></div><div class="tape b">' + tapeB + '</div><div class="tape a">' + tapeA + '</div><div class="in"><img class="logo" src="logo/full_dark.png" alt="Korra Marketing Agency"><div class="kind">' + L.prop + '</div><h1><span class="for">' + L.for + '</span><span class="cn">' + biz + '</span></h1><p class="tag">' + L.tag + '</p>' +
+      '<div class="meta"><div><span>' + L.no + '</span><b>' + esc(d.no) + '</b></div><div><span>' + L.date + '</span><b>' + fdate(d.date, d.lang) + '</b></div><div><span>' + L.valid + '</span><b>' + fdate(d.date, d.lang, +d.valid || 15) + '</b></div><div><span>' + L.by + '</span><b>' + esc(d.by) + '</b></div></div></div></section>');
+    // 2 letter + found + goals
+    var issues = ISSUES.filter(function(i){ return d.issues.indexOf(i[0]) > -1; }).map(function(i){ return '<li>' + esc(i[ix]) + '</li>'; }).join('');
+    var goals = GOALS.filter(function(g){ return d.goals.indexOf(g[0]) > -1; }).map(function(g){ return '<li>' + esc(g[ix]) + '</li>'; }).join('');
+    pages.push('<section class="page"><div class="corner"></div><div class="sec letter"><p>' + L.dear + ' ' + esc(d.contact || '') + ',</p><p>' + L.l1.replace('{biz}', '<b>' + biz + '</b>') + '</p><p>' + L.l2 + '</p><p>' + L.l3 + '</p><div class="sign"><div><div class="sig">' + esc(d.by) + '</div><div class="muted" style="font-size:12px;margin-top:4px">' + L.regards + ' ' + esc(d.by) + ', ' + esc(d.role) + '</div></div></div></div>' +
+      '<div class="sec"><div class="ey">' + L.found + '</div><h2>' + L.foundT + '</h2><div class="snap"><div><span>' + L.fol + '</span><b>' + num(d.fol || 0) + '</b></div><div><span>' + L.ppm + '</span><b>' + num(d.ppm || 0) + '</b></div><div><span>' + L.msg + '</span><b>' + num(d.msg || 0) + '</b></div></div>' + (issues ? '<ul class="issues">' + issues + '</ul>' : '') +
+      (d.note ? '<div class="box" style="margin-top:14px"><div class="ey" style="margin-bottom:6px">' + L.obs + '</div><p style="margin:0">' + esc(d.note) + '</p></div>' : '') + '</div>' +
+      '<div class="sec"><div class="ey">' + L.goals + '</div><h2>' + L.goalsT + '</h2>' + (goals ? '<ul class="goals">' + goals + '</ul>' : '') + (d.target ? '<p style="margin-top:12px"><b>' + L.target + ':</b> ' + esc(d.target) + '</p>' : '') + '</div>' + pf() + '</section>');
+    // 3 plan + ideas
+    var plan = t.rows.map(function(r){ var s = r.s, bl = (bn ? s[10] : s[9]).map(function(b){ return '<li>' + esc(b) + '</li>'; }).join('');
+      return '<div class="pl"><div class="ic">' + s[0].toUpperCase().slice(0, 5) + '</div><div><h3>' + esc(s[ix]) + '</h3><ul>' + bl + '</ul></div><span class="q">' + r.q + ' ' + esc(bn ? s[4] : s[3]) + '</span></div>'; }).join('');
+    var ideas = (IDEAS[d.type] || IDEAS.other).map(function(i, k){ return '<div><span>0' + (k + 1) + '</span>' + esc(bn ? i[1] : i[0]) + '</div>'; }).join('');
+    pages.push('<section class="page"><div class="corner"></div><div class="sec"><div class="ey">' + L.plan + '</div><h2>' + L.planT.replace('{biz}', biz) + '</h2><div class="plan' + (t.rows.length > 4 ? ' two' : '') + '">' + plan + '</div></div>' + pf() + '</section>');
+    // 4 roadmap + projection + investment
+    var has = function(id){ return d.svcs.some(function(x){ return x[0] === id; }); };
+    var m1 = [bn ? 'পেজ ও প্রতিযোগী অডিট' : 'Page and competitor audit', bn ? 'স্ট্র্যাটেজি ও কনটেন্ট ক্যালেন্ডার' : 'Strategy and content calendar'];
+    if (has('brand')) m1.push(bn ? 'ব্র্যান্ডিং কিট ডেলিভারি' : 'Branding kit delivered');
+    if (has('photo') || has('video')) m1.push(bn ? 'প্রথম ফটো ও ভিডিও শুট' : 'First photo and video shoot');
+    if (has('ads')) m1.push(bn ? 'অ্যাড অ্যাকাউন্ট সেটআপ ও প্রথম টেস্ট' : 'Ad account setup and first tests');
+    var m2 = [bn ? 'নিয়মিত পোস্ট ও রিল' : 'Regular posts and reels', bn ? 'ইনবক্স ও কমেন্ট ম্যানেজমেন্ট' : 'Inbox and comment handling'];
+    if (has('ads')) m2.push(bn ? 'যে অ্যাড কাজ করছে তাতে বাজেট বাড়ানো' : 'Move budget to winning ads');
+    if (has('web')) m2.push(bn ? 'ওয়েবসাইট লঞ্চ' : 'Website launch');
+    var m3 = [bn ? 'সবচেয়ে ভালো কনটেন্ট আরও বাড়ানো' : 'Scale the best-performing content', bn ? 'ফলাফলসহ রিপোর্ট' : 'Results report with real numbers', bn ? 'পরের ৩ মাসের প্ল্যান' : 'Plan for the next quarter'];
+    var ul = function(a){ return '<ul>' + a.map(function(x){ return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>'; };
+    var road = t.months === 1 ? '<div class="road c1"><div class="m"><span>' + L.m + ' 1</span>' + ul(m1.concat(m2.slice(0, 2), m3.slice(1, 2))) + '</div></div>'
+      : '<div class="road c3"><div class="m"><span>' + L.m + ' 1</span>' + ul(m1) + '</div><div class="m"><span>' + L.m + ' 2' + (t.months > 3 ? '–' + (t.months - 1) : '') + '</span>' + ul(m2) + '</div><div class="m"><span>' + L.m + ' ' + (t.months > 3 ? t.months : 3) + '</span>' + ul(m3) + '</div></div>';
+    var usd = (+d.adb || 0) / 122, lo = usd / .10, hi = usd / .04, proj = '';
+    if (+d.adb > 0){
+      var mm = Math.min(t.months, 6), bars = '', bl = '';
+      for (var i = 1; i <= mm; i++){ var f = Math.min(1, .55 + i * .15), v = Math.round((lo + hi) / 2 * f); bars += '<div style="height:' + Math.round(f * 100) + '%"><span>' + num(v) + '</span></div>'; bl += '<span>' + L.m + ' ' + i + '</span>'; }
+      proj = '<div class="sec"><div class="ey">' + L.proj + '</div><h2>' + L.projT + '</h2><div class="proj"><div><p>' + L.projP.replace('{adb}', num(+d.adb)) + '</p><p style="font-family:var(--f-display);font-weight:800;font-size:34px;letter-spacing:-.03em;margin:0">' + num(lo) + '–' + num(hi) + ' <span style="font-size:13px;font-weight:500;color:var(--paper-muted)">' + L.projU + '</span></p><p class="muted" style="font-size:11px;margin-top:6px">' + L.projN + '</p></div><div><div class="bars">' + bars + '</div><div class="bars-l">' + bl + '</div></div></div></div>';
+    }
+    pages.push('<section class="page"><div class="corner"></div><div class="sec"><div class="ey">' + L.ideas + '</div><h2>' + L.ideasT + '</h2><p class="muted">' + esc(d.prod || '') + '</p><div class="ideas">' + ideas + '</div></div><div class="sec"><div class="ey">' + L.road + '</div><h2>' + L.roadT + '</h2>' + road + '</div>' + proj + pf() + '</section>');
+    // 5 investment + terms
+    var rows = t.rows.map(function(r){ return '<tr><td><b>' + esc(r.s[ix]) + '</b><br><span class="muted" style="font-size:11.5px">' + r.q + ' ' + esc(bn ? r.s[4] : r.s[3]) + '</span></td><td class="r">' + money(r.price) + (r.s[5] ? ' ' + L.per : ' <span class="muted">(' + L.once + ')</span>') + '</td><td class="r">' + (r.s[5] ? t.months : '—') + '</td><td class="r">' + money(r.amt) + '</td></tr>'; }).join('');
+    var foot = '<tr><td colspan="3" class="r">' + L.sub + '</td><td class="r">' + money(t.sub) + '</td></tr>' + (t.disc ? '<tr><td colspan="3" class="r">' + L.disc + ' (' + (+d.disc) + '%)</td><td class="r">− ' + money(t.disc) + '</td></tr>' : '') + (t.adb ? '<tr><td colspan="3" class="r">' + L.adbl + ' · ' + money(+d.adb) + ' × ' + t.months + '</td><td class="r">' + money(t.adb) + '</td></tr>' : '') + '<tr class="grand"><td colspan="3">' + L.grand + '</td><td class="r">' + money(t.grand) + '</td></tr>';
+    pages.push('<section class="page"><div class="corner"></div><div class="sec"><div class="ey">' + L.inv + '</div><h2>' + L.invT + '</h2><table class="inv"><thead><tr><th>' + L.item + '</th><th class="r">' + L.amt + '</th><th class="r">' + L.mo + '</th><th class="r">' + L.amt + '</th></tr></thead><tbody>' + rows + '</tbody><tfoot>' + foot + '</tfoot></table>' +
+      (d.pay ? '<div class="box" style="margin-top:18px"><div class="ey" style="margin-bottom:6px">' + L.terms + '</div><p style="margin:0">' + esc(d.pay) + '</p></div>' : '') + '</div>' +
+      pf() + '</section>');
+    // 6 next steps + sign
+    pages.push('<section class="page"><div class="corner"></div><div class="sec"><div class="ey">' + L.next + '</div><h2>' + L.nextT + '</h2><ol class="steps-n"><li>' + L.n1 + '</li><li>' + L.n2 + '</li><li>' + L.n3 + '</li><li>' + L.n4 + '</li></ol></div>' +
+      '<div class="sec"><div class="ey">' + L.why + '</div><h2>' + L.whyT + '</h2><div class="proof"><div><b>594</b><span>' + L.p1 + '</span></div><div><b>$0.008</b><span>' + L.p2 + '</span></div><div><b>10,366</b><span>' + L.p3 + '</span></div></div></div>' +
+      '<div class="accept"><div>' + L.acc + '<br><br>' + biz + '</div><div>' + L.acc2 + '<br><br>' + esc(d.by) + ', ' + esc(d.role) + '</div></div>' +
+      '<div class="contactbox"><div><span>' + L.ph + '</span>01991-791582<br>01734-685391</div><div><span>' + L.em + '</span>korramarketingagency@gmail.com</div><div><span>' + L.of + '</span>Planet SR Shopping Mall, Left-3, Khandirpar, Cumilla</div></div>' +
+      '<p style="margin-top:40px;font-family:var(--f-display);font-weight:800;font-size:30px;letter-spacing:-.03em;line-height:1.05">' + (bn ? 'চলুন একসাথে এমন একটা ব্র্যান্ড বানাই, যা মানুষ মনে রাখে।' : 'Let\'s build a brand people <span style="background:linear-gradient(var(--lime),var(--lime)) 0 88%/100% .35em no-repeat">remember and trust.</span>') + '</p>' + pf() + '</section>');
+    var doc = document.getElementById('doc');
+    doc.className = 'doc' + (bn ? ' bn' : '');
+    doc.innerHTML = pages.join('');
+    fit();
+  }
+
+  /* ---- scale A4 pages to the preview width ---- */
+  var wrap = document.getElementById('docwrap'), docEl = document.getElementById('doc');
+  function fit(){
+    var w = wrap.parentNode.clientWidth - (document.body.classList.contains('client') ? 0 : 0);
+    var k = Math.min(1, w / 794);
+    docEl.style.transform = 'scale(' + k + ')';
+    wrap.style.width = (794 * k) + 'px';
+    wrap.style.height = (docEl.scrollHeight * k) + 'px';
+  }
+  addEventListener('resize', fit);
+
+  /* ---- live update ---- */
+  var form = document.getElementById('form'), tm = 0;
+  function update(){ var d = read(); document.getElementById('f_total').textContent = money(totals(d).grand); render(d); }
+  form.addEventListener('input', function(){ clearTimeout(tm); tm = setTimeout(update, 120); });
+  form.addEventListener('change', update);
+
+  /* ---- toast ---- */
+  var toast = document.getElementById('toast'), tt = 0;
+  function say(m){ toast.textContent = m; toast.hidden = false; clearTimeout(tt); tt = setTimeout(function(){ toast.hidden = true; }, 2400); }
+
+  /* ---- link: all data packed into the URL, no database needed ---- */
+  function pack(d){ var j = JSON.stringify(d); return window.LZString ? 'z' + LZString.compressToEncodedURIComponent(j) : 'b' + btoa(unescape(encodeURIComponent(j))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+  function unpack(s){ try { if (s[0] === 'z' && window.LZString) return JSON.parse(LZString.decompressFromEncodedURIComponent(s.slice(1))); if (s[0] === 'b'){ var b = s.slice(1).replace(/-/g, '+').replace(/_/g, '/'); return JSON.parse(decodeURIComponent(escape(atob(b)))); } } catch(e){} return null; }
+  function baseUrl(){ return location.href.split('#')[0].split('?')[0]; }
+  document.getElementById('bLink').addEventListener('click', function(){
+    var d = read(), url = baseUrl() + '#p=' + pack(d);
+    var box = document.getElementById('linkfs'); box.hidden = false;
+    document.getElementById('linkOut').value = url;
+    document.getElementById('waShare').href = 'https://wa.me/?text=' + encodeURIComponent((d.lang === 'bn' ? 'আপনার জন্য কড়রার মার্কেটিং প্রপোজাল: ' : 'Your marketing proposal from Korra: ') + url);
+    box.scrollIntoView({behavior:'smooth', block:'nearest'});
+    say('Client link ready');
+  });
+  document.getElementById('bCopy').addEventListener('click', function(){
+    var i = document.getElementById('linkOut');
+    try { navigator.clipboard.writeText(i.value).then(function(){ say('Link copied'); }, function(){ i.select(); say('Press Ctrl+C to copy'); }); } catch(e){ i.select(); say('Press Ctrl+C to copy'); }
+  });
+
+  /* ---- print / PDF ---- */
+  function doPrint(){ try { window.print(); } catch(e){} }
+  document.getElementById('bPrint').addEventListener('click', function(){ say('In the print window choose "Save as PDF" for a soft copy'); setTimeout(doPrint, 300); });
+  document.getElementById('cPrint').addEventListener('click', doPrint);
+
+  /* ================= storage: Firebase (team) or demo (this browser) ================= */
+  var user = null, isAdmin = false, db = null, auth = null;
+  var Store = {
+    list: function(){
+      if (db) return db.collection('proposals').orderBy('updatedAt', 'desc').limit(100).get().then(function(q){ return q.docs.map(function(x){ return x.data(); }); });
+      try { return Promise.resolve(JSON.parse(localStorage.getItem('korra-proposals') || '[]')); } catch(e){ return Promise.resolve([]); }
+    },
+    save: function(d){
+      var rec = {d:d, no:d.no, biz:d.biz, by:user ? user.email : '', updatedAt:Date.now()};
+      if (db) return db.collection('proposals').doc(d.no.replace(/[^\w-]/g, '_')).set(rec);
+      return Store.list().then(function(a){ a = a.filter(function(x){ return x.no !== d.no; }); a.unshift(rec); localStorage.setItem('korra-proposals', JSON.stringify(a.slice(0, 50))); });
+    },
+    remove: function(no){
+      if (db) return db.collection('proposals').doc(no.replace(/[^\w-]/g, '_')).delete();
+      return Store.list().then(function(a){ localStorage.setItem('korra-proposals', JSON.stringify(a.filter(function(x){ return x.no !== no; }))); });
+    }
+  };
+  var cache = [];
+  function ago(t){ var m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : new Date(t).toLocaleDateString('en-GB'); }
+  function listDrafts(){
+    var box = document.getElementById('saved');
+    return Store.list().then(function(a){
+      cache = a;
+      if (!a.length){ box.innerHTML = '<span class="hint">No proposals saved yet.</span>'; return; }
+      box.innerHTML = '';
+      a.forEach(function(x){
+        var it = document.createElement('div'); it.className = 'it';
+        it.innerHTML = '<span><span class="t1"></span><span class="m2"></span></span><span><button type="button">Open</button>' + (isAdmin ? '<button type="button" class="del">Delete</button>' : '') + '</span>';
+        it.querySelector('.t1').textContent = (x.biz || 'Untitled') + ' · ' + x.no;
+        it.querySelector('.m2').textContent = (x.by ? x.by + ' · ' : '') + ago(x.updatedAt || 0);
+        it.querySelector('button').addEventListener('click', function(){ write(x.d); update(); say('Proposal opened'); });
+        var del = it.querySelector('.del');
+        if (del) del.addEventListener('click', function(){
+          if (del.dataset.sure !== '1'){ del.dataset.sure = '1'; del.textContent = 'Sure?'; setTimeout(function(){ del.dataset.sure = ''; del.textContent = 'Delete'; }, 3000); return; }
+          Store.remove(x.no).then(function(){ say('Deleted'); listDrafts(); }, function(e){ say('Could not delete: ' + (e.code || e.message)); });
+        });
+        box.appendChild(it);
+      });
+    }, function(e){ box.innerHTML = '<span class="hint">Could not load proposals (' + esc(e.code || e.message) + ').</span>'; });
+  }
+  document.getElementById('bSave').addEventListener('click', function(){
+    var d = read(); if (!d.no){ say('Add a proposal number first'); return; }
+    Store.save(d).then(function(){ say(db ? 'Saved for the whole team' : 'Saved (demo: this browser only)'); listDrafts(); }, function(e){ say('Could not save: ' + (e.code || e.message)); });
+  });
+  document.getElementById('bNew').addEventListener('click', function(){
+    var max = cache.reduce(function(m, x){ var n = parseInt(String(x.no).split('-').pop(), 10); return isNaN(n) ? m : Math.max(m, n); }, 1);
+    write({biz:'', contact:'', loc:'Cumilla', prod:'', note:'', target:'', fol:0, ppm:0, msg:0, issues:[], goals:[], svcs:[], no:'KMA-' + new Date().getFullYear() + '-' + String(max + 1).padStart(3, '0'), date:new Date().toISOString().slice(0, 10)});
+    update(); document.getElementById('f_biz').focus();
+  });
+
+  /* ================= login gate ================= */
+  var gate = document.getElementById('gate'), gErr = document.getElementById('gErr'), gOk = document.getElementById('gOk'), gBtn = document.getElementById('gBtn');
+  function showErr(m){ gOk.hidden = true; gErr.textContent = m; gErr.hidden = false; }
+  function signedIn(u){
+    user = u; isAdmin = ADMIN_EMAILS.indexOf((u.email || '').toLowerCase()) > -1;
+    gate.hidden = true;
+    document.getElementById('who').hidden = false; document.getElementById('bOut').hidden = false;
+    document.getElementById('whoEm').textContent = u.email; document.getElementById('whoAv').textContent = (u.email || 'K')[0].toUpperCase();
+    document.getElementById('whoRole').textContent = isAdmin ? 'admin' : 'team';
+    document.getElementById('f_by').value = document.getElementById('f_by').value || u.email.split('@')[0];
+    listDrafts(); update();
+  }
+  function signedOut(){
+    user = null; isAdmin = false; gate.hidden = false;
+    document.getElementById('who').hidden = true; document.getElementById('bOut').hidden = true;
+    document.getElementById('gPass').value = ''; setTimeout(function(){ document.getElementById('gEmail').focus(); }, 50);
+  }
+  function fbMsg(e){
+    var c = e && e.code || '';
+    if (/invalid-credential|wrong-password|user-not-found|invalid-email/.test(c)) return 'Email or password is wrong.';
+    if (/too-many-requests/.test(c)) return 'Too many tries. Wait a few minutes and try again.';
+    if (/network/.test(c)) return 'No internet connection.';
+    return 'Login failed (' + (c || e.message) + ').';
+  }
+  function loadScript(src){ return new Promise(function(ok, no){ var s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = function(){ no(new Error('Could not load ' + src)); }; document.head.appendChild(s); }); }
+
+  document.getElementById('gateForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var em = document.getElementById('gEmail').value.trim().toLowerCase(), pw = document.getElementById('gPass').value;
+    if (!em || !pw){ showErr('Enter your email and password.'); return; }
+    gErr.hidden = true; gBtn.disabled = true; gBtn.textContent = 'Logging in…';
+    var done = function(){ gBtn.disabled = false; gBtn.textContent = 'Log in'; };
+    if (auth){ auth.signInWithEmailAndPassword(em, pw).then(done, function(err){ done(); showErr(fbMsg(err)); }); return; }
+    // demo mode
+    done();
+    if (em === 'admin@korra.demo' && pw === 'korra2026'){ try { sessionStorage.setItem('korra-demo', em); } catch(x){} signedIn({email:em}); }
+    else showErr('Email or password is wrong.');
+  });
+  document.getElementById('gForgot').addEventListener('click', function(){
+    var em = document.getElementById('gEmail').value.trim();
+    if (!em){ showErr('Type your email first, then press "Forgot password?".'); return; }
+    if (!auth){ showErr('Password reset works after Firebase is connected.'); return; }
+    auth.sendPasswordResetEmail(em).then(function(){ gErr.hidden = true; gOk.textContent = 'Reset link sent to ' + em + '.'; gOk.hidden = false; }, function(err){ showErr(fbMsg(err)); });
+  });
+  document.getElementById('bOut').addEventListener('click', function(){
+    if (auth){ auth.signOut(); return; }
+    try { sessionStorage.removeItem('korra-demo'); } catch(x){} signedOut();
+  });
+
+  /* ================= open: client link (no login) or builder (login) ================= */
+  var m = location.hash.match(/^#p=(.+)$/), shared = m ? unpack(m[1]) : null;
+  if (shared){
+    document.body.classList.add('client');
+    document.getElementById('barTitle').textContent = shared.lang === 'bn' ? 'আপনার প্রপোজাল' : 'Your proposal';
+    document.title = 'Proposal for ' + (shared.biz || 'you') + ' · Korra';
+    document.getElementById('cAccept').href = 'https://wa.me/' + WA + '?text=' + encodeURIComponent((shared.lang === 'bn' ? 'আসসালামু আলাইকুম, আমরা প্রপোজাল ' : 'Hi Korra, we accept proposal ') + shared.no + (shared.lang === 'bn' ? ' গ্রহণ করছি। — ' : ' — ') + shared.biz);
+    document.getElementById('cAccept').textContent = shared.lang === 'bn' ? 'WhatsApp-এ গ্রহণ করুন' : 'Accept on WhatsApp';
+    document.getElementById('cPrint').textContent = shared.lang === 'bn' ? 'প্রিন্ট / PDF' : 'Print / Save PDF';
+    render(shared);
+  } else if (FIREBASE_CONFIG){
+    gate.hidden = false; gBtn.disabled = true; gBtn.textContent = 'Connecting…';
+    var base = 'https://www.gstatic.com/firebasejs/' + FB_VER + '/';
+    loadScript(base + 'firebase-app-compat.js').then(function(){ return Promise.all([loadScript(base + 'firebase-auth-compat.js'), loadScript(base + 'firebase-firestore-compat.js')]); }).then(function(){
+      firebase.initializeApp(FIREBASE_CONFIG); auth = firebase.auth(); db = firebase.firestore();
+      gBtn.disabled = false; gBtn.textContent = 'Log in';
+      auth.onAuthStateChanged(function(u){ if (u) signedIn(u); else signedOut(); });
+    }, function(err){ showErr('Could not connect to login service. Check your internet and reload.'); });
+  } else {
+    document.getElementById('gDemo').hidden = false;
+    var dm = null; try { dm = sessionStorage.getItem('korra-demo'); } catch(x){}
+    if (dm) signedIn({email:dm}); else signedOut();
+  }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+})();
+</script>
+</body>
+</html>

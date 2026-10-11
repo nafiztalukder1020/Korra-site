@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Korra team: everyone who may open and save proposals.
+    function isTeam() {
+      return request.auth != null
+        && request.auth.token.email in [
+          'admin@korramarketing.com',
+          'member1@korramarketing.com',
+          'member2@korramarketing.com'
+        ];
+    }
+
+    // Admins: may also delete proposals.
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email in ['admin@korramarketing.com'];
+    }
+
+    match /proposals/{id} {
+      allow read, create, update: if isTeam();
+      allow delete: if isAdmin();
+    }
+
+    // Everything else is closed.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
